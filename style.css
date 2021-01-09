@@ -16,18 +16,35 @@ body {
   display: inline-flex;
   margin: 0;
   align-items: center;
+  background-color: rgb(15, 15, 15);
 }
 
 .container {
-  background-color: rgb(13, 33, 39);
+  background-color: rgb(19, 19, 19);
   border-radius: 5pt;
 }
 
 .tile {
-  background-color: rgb(41, 62, 68);
+  /* background-color: rgb(34, 34, 34); */
   height: 100%;
   width: 100%;
+  margin: auto;
+}
+
+.dot {
+  height: 100%;
+  width: 100%;
+  transform: scale(0.25);
+  background-color: rgb(34, 34, 34);
+  transform: scale(0.25);
+  border-radius: 50%;
+  transition: 200ms cubic-bezier(0.4, 0.95, 0.68, 0.99);
+}
+
+.dotActive {
+  transform: scale(0.9);
   border-radius: 5pt;
+  background-color: rgb(34, 34, 34);
 }
 
 .row {
