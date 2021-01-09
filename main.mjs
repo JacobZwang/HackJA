@@ -1,20 +1,45 @@
-import Express from "express";
 import SocketIO from "socket.io/lib/index.js";
-import Http from "http";
-
-const app = Express();
-const http = Http.Server(app);
-const io = SocketIO(http);
-
-app.use(Express.static("client"));
-
-http.listen(3000, () => {
-  console.log("listening on *:3000");
-});
+const io = SocketIO.listen(8000);
 
 const serverSettings = {
   gridSize: [15, 15],
 };
+const memory = {
+  users: [
+    {
+      id: "bot1",
+      location: [4, 5],
+    },
+  ],
+};
+
+function findUser(user) {
+  return memory.users.find((currentUser) => currentUser.id === user.id);
+}
+
+function createUser(id) {
+  return {
+    id: id,
+    location: [undefined, undefined],
+  };
+}
+
+function declareUser(socket) {
+  const userToDeclare = createUser(socket.id);
+  memory.users.push(userToDeclare);
+
+  socket.emit("declareUser", userToDeclare);
+  return true;
+}
+
+function placeUser(socket, [x, y]) {
+  const userToPlace = memory.users.find((user) => user.id === socket.id);
+
+  userToPlace.location[0] = x;
+  userToPlace.location[1] = y;
+
+  socket.emit("placeUser", userToPlace);
+}
 
 function validateRequestMove(requester, moverId, location) {
   if (location[0] > serverSettings.gridSize[0] || location[0] < 0) return false;
@@ -22,12 +47,26 @@ function validateRequestMove(requester, moverId, location) {
   return true;
 }
 
+function getRandomInt(max) {
+  return Math.floor(Math.random() * Math.floor(max));
+}
+
 io.on("connection", (socket) => {
-  io.emit("serverConnection", serverSettings);
-  socket.on("requestMove", (id, moverId, location) => {
-    console.log(location);
-    if (validateRequestMove(requester, moverId, location)) {
-      socket.emit("moveUser", moverId, location);
+  io.emit("serverConnection", serverSettings, memory.users);
+
+  declareUser(socket);
+  placeUser(socket, [
+    getRandomInt(serverSettings.gridSize[0]),
+    getRandomInt(serverSettings.gridSize[1]),
+  ]);
+
+  socket.on("requestMove", (requesterId, moverId, location) => {
+    if (validateRequestMove(requesterId, moverId, location)) {
+      const user = memory.users.find((user) => user.id === socket.id);
+      user.location[0] = location[0];
+      user.location[1] = location[1];
+
+      socket.emit("moveUser", user);
     }
   });
 
@@ -41,6 +80,15 @@ io.on("connection", (socket) => {
     socket.on("disconnect", () => {
       socket.to(broadcaster).emit("disconnectPeer", socket.id);
     });
+  });
+
+  socket.on("disconnect", () => {
+    memory.users.splice(
+      memory.users.indexOf((user) => user.id === socket.id),
+      1
+    );
+
+    socket.emit(findUser(socket.id));
   });
 
   socket.on("offer", (id, message) => {

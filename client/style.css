@@ -47,6 +47,17 @@ body {
   background-color: rgb(34, 34, 34);
 }
 
+.icon {
+  height: 100%;
+  width: 100%;
+  background-color: blue;
+}
+
+.video {
+  height: 100%;
+  width: 100%;
+}
+
 .row {
   display: grid;
 }

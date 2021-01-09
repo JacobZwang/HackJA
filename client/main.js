@@ -1,14 +1,52 @@
 (function () {
-  var socket = io("/");
+  const socket = io.connect("http://localhost:8000");
 
   const options = {
     gridSize: [15, 15],
     margin: 100,
   };
 
-  socket.on("serverConnection", (settings) => {
+  const memory = {
+    users: [],
+  };
+
+  socket.on("serverConnection", (settings, users) => {
     console.log("it worked!");
     options.gridSize = settings.gridSize;
+    memory.users = users;
+
+    users.forEach((user) => {
+      if (
+        user.location[0] != undefined &&
+        user.location[1] != undefined &&
+        user.location != undefined
+      ) {
+        drawUserIcon(user);
+      }
+    });
+  });
+
+  socket.on("moveUser", (user) => {
+    drawUserIcon(user);
+  });
+
+  socket.on("declareUser", (user) => {
+    memory.users.push(user);
+  });
+
+  socket.on("placeUser", (user) => {
+    const userToPlace = findUser(socket);
+
+    userToPlace.location[0] = user.location[0];
+    userToPlace.location[1] = user.location[1];
+  });
+
+  socket.on("disconnect", (user) => {
+    undrawUserIcon(user);
+    memory.users.splice(
+      memory.users.indexOf((user) => user.id === socket.id),
+      1
+    );
   });
 
   const container = document.createElement("div");
@@ -18,6 +56,10 @@
     ((window.innerHeight - options.margin) / options.gridSize[1]) *
     options.gridSize[0]
   }px`;
+
+  function findUser(user) {
+    return memory.users.find((currentUser) => currentUser.id === user.id);
+  }
 
   function createRow() {
     const row = document.createElement("div");
@@ -38,15 +80,16 @@
     tile.appendChild(dot);
 
     tile.addEventListener("mouseover", mouseOver);
-    tile.addEventListener("click", mouseClick);
 
     function mouseOver() {
       dot.classList.add("dotActive");
 
+      tile.addEventListener("click", mouseClick);
       tile.addEventListener("mouseleave", () => {
         dot.classList.remove("dotActive");
 
         tile.removeEventListener("mouseleave", mouseOver);
+        tile.removeEventListener("click", mouseClick);
       });
     }
 
@@ -56,8 +99,35 @@
     return tile;
   }
 
+  function createUserIcon() {
+    const icon = document.createElement("div");
+    icon.classList.add("icon");
+
+    const video = document.createElement("video");
+    icon.appendChild(video);
+
+    return icon;
+  }
+
+  function drawUserIcon(user) {
+    const location = tiles[user.location[0]][
+      user.location[1]
+    ].getElementsByClassName("dot")[0];
+
+    location.appendChild(createUserIcon());
+    location.classList.add("userOnTile");
+  }
+
+  function undrawUserIcon(user) {
+    const location = tiles[user.location[0]][
+      user.location[1]
+    ].getElementsByClassName("dot")[0];
+
+    location.removeChild(location.childNodes[0]);
+  }
+
   function requestMove(x, y) {
-    socket.emit("requestMoveUser", 1 /* , 1, [x, y] */);
+    socket.emit("requestMove", [x, y]);
   }
 
   const tiles = Array.from({ length: options.gridSize[1] }, () =>
