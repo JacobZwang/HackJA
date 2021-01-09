@@ -1,8 +1,15 @@
 (function () {
+  var socket = io("/");
+
   const options = {
     gridSize: [15, 15],
     margin: 100,
   };
+
+  socket.on("serverConnection", (settings) => {
+    console.log("it worked!");
+    options.gridSize = settings.gridSize;
+  });
 
   const container = document.createElement("div");
   container.classList.add("container");
@@ -44,9 +51,13 @@
     }
 
     function mouseClick() {
-      console.log(x, y);
+      requestMove(x, y);
     }
     return tile;
+  }
+
+  function requestMove(x, y) {
+    socket.emit("requestMoveUser", 1 /* , 1, [x, y] */);
   }
 
   const tiles = Array.from({ length: options.gridSize[1] }, () =>
